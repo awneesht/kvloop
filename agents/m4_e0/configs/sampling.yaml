@@ -1,0 +1,20 @@
+# generate_content_config for every agent (plan.md §4.3 starting values).
+# Allowed fields per HARNESS_README mirror: temperature, top_p, top_k, max_output_tokens, presence_penalty,
+# frequency_penalty, stop_sequences, response_mime_type, seed, thinking_config.
+#
+# EXP-003 (public-budget-shape test, 2026-10-19): this is E0's config, restored after EXP-003's dev-48 test
+# run (notebooks/exp010_public_budget_dev48/, results in experiments/EXP-003-public-budget.md). That run's
+# pre-push review confirmed thinking_budget IS forwarded to vLLM as a real cap (harness source:
+# adk_submission/resolvers/generation.py sets extra_body["thinking_token_budget"]; server.py enables the
+# matching logits processor) -- the VERIFY(Q3) note below describing it as possibly-ignored was wrong and is
+# corrected here, not deleted, since the surrounding history is useful context.
+temperature: 0.2          # scorer default is 1.0; E4 A/Bs 0.2 vs 1.0
+top_p: 0.95
+top_k: 64
+max_output_tokens: 4096   # keeps prompt + output well under the 32,768 context wall; E11 tries 2048/6144
+thinking_config:
+  include_thoughts: true  # false = thinking off (sent as enable_thinking=false); E2/E3 ablate this
+  thinking_budget: 256    # CORRECTED 2026-10-19: this IS forwarded to vLLM as a real generation cap (see
+                          # header note above), not merely harmless-if-ignored as VERIFY(Q3) originally
+                          # guessed. EXP-003 raised this to 4096 as part of a bundled change and did not
+                          # isolate its effect; keep at 256 (E0's scored value) until it's tested alone.

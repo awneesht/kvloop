@@ -41,3 +41,20 @@ cannot change this.
 because the weights do not fit. Report H4 as *not testable as specified (precondition failed)*. The 4x L4
 half of H4 (no material change in decode speed at concurrency 1) is *supported*. A single-GPU comparison
 with the 12B model is exploratory, not pre-registered.
+
+## 2026-10-23 - Closed-loop design decisions (before any closed-loop run)
+
+- **Agent:** a fixed public agent, `agents/m4_e0` (Apache-2.0, from M4-on-Github/Gemma4_Dev_Agent_Kaggle, its
+  "E0/EXP-005" config: 4.0 min / 45 tool calls / 70 turns, thinking budget 256). Reported locally at
+  22.9% (11/48) on the task cohort below; public LB 4-7/58. Using a public agent keeps the study about the
+  KV cache, not about agent engineering, and lets anyone reproduce it.
+- **Tasks:** `cohorts/dev-48.txt`, 48 public tasks whose gold patch passes in the subprocess sandbox.
+- **Deterministic decoding:** temperature 0 with a fixed seed in a private copy of the agent. Another
+  team measured that at temperature 0.2 more than half of per-task outcomes change between identical
+  runs, which would hide any KV effect at n = 48. With greedy decoding, a BF16 replicate run measures the
+  remaining (numerical) noise floor, and the turn at which an FP8 trajectory first diverges from BF16
+  (`kvloop diverge`) attributes the change to the KV cache. Resolve rate stays the primary metric
+  (paired by task, as pre-registered); divergence is a mechanism measure.
+- **Harness fidelity:** the run uses the harness's own `VllmServer` and `Evaluator` with the scorer's
+  compaction (interval 15, overlap 2, 14,336-token threshold, retention 5) and graph settings, plus the
+  arm's KV flags and the logging proxy.

@@ -4,6 +4,7 @@
   kvloop serve-args  ARM [--config-json C]           print vLLM flags for one arm (used by scripts)
   kvloop kvmath      [--pool-gib G] [--config-json C] KV memory per agent and max concurrency
   kvloop behaviour   LOG [--out CSV]                 closed-loop behaviour metrics from a proxy log
+  kvloop diverge     LOG_A LOG_B                     first differing turn per task between two runs
   kvloop replay      --model M --log LOG --out CSV    open-loop teacher-forced replay
   kvloop analyze     --runs DIR [--replay CSV] --out DIR
   kvloop proxy       ...                             logging proxy (see kvloop.proxy)
@@ -65,6 +66,19 @@ def cmd_behaviour(a):
     if a.out:
         df.to_csv(a.out, index=False)
     print(df.describe().T.to_string())
+
+
+def cmd_diverge(a):
+    import pandas as pd
+
+    from kvloop.trajectories import divergence, read_jsonl
+
+    df = pd.DataFrame(divergence(read_jsonl(a.log_a), read_jsonl(a.log_b)))
+    if a.out:
+        df.to_csv(a.out, index=False)
+    print(df.to_string(index=False))
+    if len(df):
+        print(f"identical trajectories: {int(df.identical.sum())}/{len(df)}")
 
 
 def cmd_replay(a):
@@ -154,6 +168,11 @@ def main(argv=None):
     s.add_argument("--tasks")
     s.add_argument("--out")
     s.set_defaults(fn=cmd_behaviour)
+    s = sub.add_parser("diverge", help="first differing turn per task between two runs")
+    s.add_argument("log_a")
+    s.add_argument("log_b")
+    s.add_argument("--out")
+    s.set_defaults(fn=cmd_diverge)
     s = sub.add_parser("replay")
     s.add_argument("--model", required=True)
     s.add_argument("--log", required=True)

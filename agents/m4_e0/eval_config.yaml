@@ -1,0 +1,28 @@
+# Per-task budgets (plan.md §4.4). The scorer reads exactly these four keys under `evaluation:`;
+# a missing key means NO limit, and the harness default (60 min/task) would blow the 12 h run budget.
+# VERIFY(Q2): confirm key names and the `evaluation:` nesting against data/raw/sample_submission/eval_config.yaml.
+# Worst case per plan: 120 tasks x (4.0 + 1.0 min setup) = 10.0 h <= 11.0 h gate (tools/validate_submission.py).
+#
+# EXP-005 (safe resubmit, 2026-10-20): E0 with ONLY max_time_minutes trimmed 4.5 -> 4.0, after submission #2
+# (EXP-003 bundle, 18.0 h worst case) hit "Notebook Timeout". E0 at 4.5 sat exactly on the 11.0 h gate; 4.0 gives
+# 1.0 h of formula margin and is strictly time-dominated by E0, which already completed on this hidden set.
+# Expected cost from E0's dev-48 traces (cumulative elapsed_s of each resolved task's last edit_file): 10/11
+# resolves made their final edit by 227 s; only fastapi_14301 (edits at 245-262 s) would be cut by a 240 s cap,
+# i.e. ~9% of resolves, ~0.4 of E0's 4/58 public tasks -- below the reported +/-2-task LB noise, so this run is
+# read mainly as a near-replicate of E0 (LB variance probe). Sampling and prompt are E0's, unchanged.
+#
+# EXP-003 (public-budget-shape test, 2026-10-19): this is E0's config, restored after EXP-003's dev-48 test
+# run (notebooks/exp010_public_budget_dev48/, kernel rainm4/gemma4-exp003-public-budget-dev48, results in
+# experiments/EXP-003-public-budget.md). EXP-003 found the public bundle's max_time_minutes: 8/max_tool_calls:
+# 28 combination resolved slightly worse (18.75% vs E0's 22.9%, n=48, CIs overlap) and that the tightened
+# 28-call cap directly cost at least one resolve (rich_3676, stopped at exactly 28 calls) that E0's 45-call
+# budget allowed to finish -- do not readopt max_tool_calls: 28 without first isolating it from the other
+# bundled changes (see that doc's decision section).
+evaluation:
+  max_time_minutes: 4.0   # hard cap on the agent loop (asyncio timeout); edits on disk are still graded. E0 was 4.5.
+  max_tool_calls: 45      # get_status and submit_patch are free and do not count
+  max_turns: 70
+  timeout_seconds: 300    # VERIFY(Q2): per community source reading this ALSO caps the Phase-2 grading pytest
+                          # run, so we keep the harness default instead of plan's 150 s. The agent-side
+                          # command timeout is min(timeout_seconds, remaining task time), so 300 costs nothing;
+                          # the prompt wraps pytest in `timeout 90` to bound it anyway.

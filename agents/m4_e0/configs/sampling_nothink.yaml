@@ -1,0 +1,13 @@
+# E3 variant: thinking genuinely OFF + strict tool-arg rules in the prompt.
+# Not referenced by agent.yaml (not shipped). To use: point agent.yaml's generate_content_config here.
+#
+# [V] HARNESS_README §4 line 150: `include_thoughts: false` does NOT disable reasoning — it still runs with
+# enable_thinking=true and merely strips Part(thought=True) from the response and outgoing history.
+# The ONLY way to disable thinking is `thinking_budget: 0`, which sets enable_thinking=false (line 148).
+temperature: 0.2
+top_p: 0.95
+top_k: 64
+max_output_tokens: 4096
+thinking_config:
+  thinking_budget: 0      # [V] 0 => enable_thinking=false. This is what actually turns thinking off.
+  include_thoughts: false

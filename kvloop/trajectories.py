@@ -206,3 +206,36 @@ def match_tasks(trajs: list[Trajectory], tasks: list[dict], id_key="instance_id"
             if s > best_s:
                 best, best_s = tid, s
         tr.task_id = best if best_s >= min_jaccard else None
+
+
+def _turn_signature(t: Turn) -> str:
+    ids = t.completion_token_ids
+    if ids:
+        return "ids:" + ",".join(map(str, ids))
+    calls = "|".join(canonical_call(tc) for tc in t.tool_calls)
+    return "txt:" + _text(t.message.get("content")) + "#" + calls
+
+
+def divergence(records_a: list[dict], records_b: list[dict]) -> list[dict]:
+    """Pair trajectories of two runs by task opening and find the first turn whose output differs.
+
+    first_diff_turn is None when both trajectories are identical turn for turn.
+    """
+    a = {t.key: t for t in group(records_a)}
+    b = {t.key: t for t in group(records_b)}
+    rows = []
+    for key in sorted(set(a) & set(b)):
+        ta, tb = a[key].turns, b[key].turns
+        first = None
+        for i in range(min(len(ta), len(tb))):
+            if _turn_signature(ta[i]) != _turn_signature(tb[i]):
+                first = i
+                break
+        if first is None and len(ta) != len(tb):
+            first = min(len(ta), len(tb))
+        ctx = None
+        if first is not None and first < len(ta):
+            ctx = (ta[first].usage or {}).get("prompt_tokens")
+        rows.append({"traj": key, "turns_a": len(ta), "turns_b": len(tb), "identical": first is None,
+                     "first_diff_turn": first, "prompt_tokens_at_diff": ctx})
+    return rows

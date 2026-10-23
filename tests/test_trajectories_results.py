@@ -64,3 +64,17 @@ def test_stats():
     assert mcnemar_exact(0, 0) == 1.0
     assert mcnemar_exact(10, 0) < 0.01
     assert abs(mcnemar_exact(5, 5) - 1.0) < 1e-9
+
+
+def test_divergence():
+    from kvloop.trajectories import divergence
+
+    m = lambda extra=(): _msgs("Issue A: crash", list(extra))  # noqa: E731
+    run_a = [make_record(m(), tool_calls=[tc("read_file", {"p": 1})], completion_ids=[1, 2], t=0),
+             make_record(m([{"role": "tool", "content": "x"}]), tool_calls=[tc("edit_file", {})], completion_ids=[3], t=1)]
+    run_b_same = [dict(r) for r in run_a]
+    run_b_diff = [run_a[0], make_record(m([{"role": "tool", "content": "x"}]), tool_calls=[tc("run_command", {})],
+                                        completion_ids=[4], t=1)]
+    assert divergence(run_a, run_b_same)[0]["identical"]
+    d = divergence(run_a, run_b_diff)[0]
+    assert not d["identical"] and d["first_diff_turn"] == 1

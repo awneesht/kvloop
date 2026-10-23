@@ -1,0 +1,16 @@
+# Optional read-only localization sub-agent (plan §6.1 E9). NOT referenced by agent.yaml in v1, so the
+# packer does not ship it. To enable, add to agent.yaml tools:
+#   - agent_tool:
+#       config_path: sub_agents/analyzer.yaml
+#       skip_summarization: true
+# VERIFY(Q2): agent_tool key shape above matches the HARNESS_README mirror and two community repos.
+name: analyzer
+model: gemma-4-31b-it-qat-w4a16-ct
+description: Read-only code explorer that locates the function(s) behind an issue and returns file paths with line ranges and a one-sentence root-cause hypothesis.
+instruction: !include ../prompts/analyzer.md
+generate_content_config: !include ../configs/sampling.yaml
+tools:
+  - run_command
+  - read_file
+  - get_code_neighbors
+  - search_similar_code

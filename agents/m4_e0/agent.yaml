@@ -1,0 +1,20 @@
+# Root agent for submission v1 (prompt-only, single agent, no adapter, no skills).
+# Shape follows the HARNESS_README mirror and four community submissions (plan.md §3.4 Q2).
+# VERIFY(Q2): diff this file against data/raw/sample_submission/agent.yaml once the dataset is downloaded.
+# VERIFY(Q1): tool names below must appear in the compile-time ToolRegistry (grep adk-submission wheel).
+name: swe_coder
+model: gemma-4-31b-it-qat-w4a16-ct   # VERIFY(Q2): sample may spell it with a provider prefix; prefixes are stripped by the harness
+description: Resolves one GitHub issue in the Python repository at /workspace with a minimal, verified patch.
+instruction: !include prompts/swe_coder.md
+generate_content_config: !include configs/sampling.yaml
+tools:
+  - run_command
+  - read_file
+  - edit_file
+  - write_file
+  - get_status
+  - submit_patch
+  # Graph tools are declared but demoted in the prompt ("only if grep fails"); E5 ablates them off.
+  - get_code_neighbors
+  - search_similar_code
+  - get_code_subgraph

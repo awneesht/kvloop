@@ -20,14 +20,15 @@ import os
 import subprocess
 from pathlib import Path
 
-MODEL = "/kaggle/input/gemma-4-31b-it-qat-w4a16-ct"            # EDIT: model dir in the competition data
 HARNESS_DIR = "/kaggle/input/gemma-4-developer-agent"          # EDIT: competition data root
-SUBMISSION = "/kaggle/input/gemma-4-developer-agent/sample_submission"  # EDIT: agent config to evaluate
+MODEL = "/kaggle/input/gemma-4-31b-it-qat-w4a16-ct"            # EDIT: model dir (see `ls` output in stage 0)
+SUBMISSION = f"{HARNESS_DIR}/sample_submission"                # EDIT: agent config to evaluate (keep fixed)
 KVLOOP_SRC = "/kaggle/input/kvloop"                            # kvloop uploaded as a Kaggle dataset
 WORK = Path("/kaggle/working")
 RUNS = WORK / "runs"
 N_TASKS = 40                                                   # fixed subset, same for every arm
-os.environ.update(MODEL=MODEL, RUNS_DIR=str(RUNS), CONFIG_JSON=f"{MODEL}/config.json")
+os.environ.update(MODEL=MODEL, RUNS_DIR=str(RUNS), CONFIG_JSON=f"{MODEL}/config.json",
+                  OPENAI_API_KEY="EMPTY")  # LiteLLM needs a key; vLLM ignores it
 
 
 def sh(cmd, check=True):
@@ -39,7 +40,8 @@ def sh(cmd, check=True):
 # ## 0. Install kvloop and read the harness docs
 
 # %%
-sh(f"pip install -q --no-deps -e {KVLOOP_SRC} || pip install -q --no-deps git+https://github.com/awneesht/kvloop")
+sh(f"pip install -q --no-deps {KVLOOP_SRC} || pip install -q --no-deps git+https://github.com/awneesht/kvloop")
+sh(f"pip install -q --no-index --find-links {HARNESS_DIR}/wheelhouse swegemma adk-submission", check=False)
 sh(f"ls {HARNESS_DIR}; find {HARNESS_DIR} -maxdepth 2 -name 'HARNESS_README*' -exec sed -n '1,200p' {{}} \\;", check=False)
 sh("swegemma --help; swegemma eval --help", check=False)
 sh("python -c 'import vllm, transformers; print(vllm.__version__, transformers.__version__)'", check=False)
@@ -52,15 +54,18 @@ sh("kvloop --config-json $CONFIG_JSON arms")
 sh("kvloop --config-json $CONFIG_JSON kvmath --contexts 4096 8192 16384 32768")
 
 # %% [markdown]
-# ## 2. Probe arms (about 10 min per arm)
-# Retires the main risks: FP8 KV and layer skipping on L4 + Gemma 4 head_dim 512,
-# the real KV pool size, and whether `return_token_ids` works.
+# ## 2. Probe arms (about 10 min per arm and setting)
+# Retires the main risks: FP8 KV and layer skipping on L4 + Gemma 4 head_dim 512, the real
+# KV pool, decode speed, whether a ~28K prompt fits, and whether `return_token_ids` works.
+# Two settings: the scorer's 4x L4 (TP=4), and one 24 GB GPU (TP=1), the consumer case
+# where KV memory actually binds.
 
 # %%
 sh(f"bash {KVLOOP_SRC}/scripts/probe_arms.sh bf16 fp8_all fp8_global fp8_sliding", check=False)
-for f in sorted((RUNS / "probe").glob("*.json")):
-    if not f.name.endswith(".resp.json"):
-        print(json.loads(f.read_text()))
+sh(f"TP=1 GPU_UTIL=0.92 CUDA_VISIBLE_DEVICES=0 bash {KVLOOP_SRC}/scripts/probe_arms.sh "
+   "bf16 fp8_all fp8_global fp8_sliding", check=False)
+for f in sorted((RUNS / "probe").glob("*/*.json")):
+    print(f.parent.name, json.loads(f.read_text()))
 
 # %% [markdown]
 # ## 3. Closed-loop runs
@@ -69,12 +74,26 @@ for f in sorted((RUNS / "probe").glob("*.json")):
 # (http://127.0.0.1:8000/v1) and write results to `$OUT/results`.
 
 # %%
-TASKS_FILE = WORK / "tasks_subset.txt"
-# EDIT: build the subset from the public task list, e.g. the first N_TASKS ids sorted by repo
-# TASKS_FILE.write_text("\n".join(task_ids[:N_TASKS]))
+import random
+
+tasks = [json.loads(x) for x in open(f"{HARNESS_DIR}/tasks.jsonl") if x.strip()]
+by_repo = {}
+for t in tasks:
+    by_repo.setdefault(t["instance_id"].rsplit("_", 1)[0], []).append(t["instance_id"])
+rng = random.Random(20261023)  # fixed seed: the same subset for every arm and run
+subset = []
+for repo, ids in sorted(by_repo.items()):  # stratified by repo, proportional
+    k = max(1, round(N_TASKS * len(ids) / len(tasks)))
+    subset += rng.sample(sorted(ids), min(k, len(ids)))
+subset = sorted(subset)[:N_TASKS]
+(WORK / "tasks_subset.txt").write_text("\n".join(subset))
+print(len(subset), "tasks:", {r: sum(s.startswith(r) for s in subset) for r in by_repo})
+
+# swegemma eval talks to 127.0.0.1:8000 (the kvloop proxy); one task at a time, like the scorer
 os.environ["HARNESS_CMD"] = (
-    f'swegemma eval --submission {SUBMISSION} --tasks-file {TASKS_FILE} '  # EDIT: real flags
-    f'--base-url http://127.0.0.1:8000/v1 --out "$OUT/results"'
+    f"swegemma eval --tasks {HARNESS_DIR}/tasks.jsonl --snapshots-dir {HARNESS_DIR}/snapshots "
+    f'--submission-dir {SUBMISSION} --results-dir "$OUT/results" --sandbox subprocess '
+    f"--task-ids {' '.join(subset)} --concurrency 1 --display quiet"
 )
 for arm in ["bf16", "fp8_all", "fp8_global"]:
     for run in ["r1", "r2"]:

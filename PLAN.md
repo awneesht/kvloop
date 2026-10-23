@@ -4,11 +4,11 @@ Deadline: **Thu 2026-11-12 23:59 UTC (5:59 PM Chicago)**. Target submit: **Wed N
 
 ## Compute budget (estimate)
 The scorer allows ~6 min per task on 4x L4. A 40-task closed-loop run is therefore roughly 2-4 GPU-hours
-of wall time (4 GPUs count as one Kaggle session). Check your weekly Kaggle GPU quota on the settings page.
+of wall time (4 GPUs count as one Kaggle session). The L4x4 quota is reported as 30 hours/week; confirm in the notebook editor.
 
 | stage | runs | est. session hours |
 |---|---|---|
-| probe 4 arms | 1 | 1-2 |
+| probe 4 arms x {4x L4, 1x L4} | 2 | 2-3 |
 | closed loop bf16, fp8_all, fp8_global x 2 runs x 40 tasks | 6 | 15-24 |
 | replay 20 trajectories x 8 arms | 1-2 | 4-6 |
 | optional fp8_sliding x 1 run | 1 | 3-4 |
@@ -24,7 +24,9 @@ than two runs for bf16 and fp8_global (they carry H2 and H4).
 - Commit `paper/hypotheses.md` (pre-registration) before any GPU result.
 - Read HARNESS_README.md; fix `scripts/scorer_flags.sh` and `HARNESS_CMD` in the notebook.
 - Run `probe_arms.sh`.
-- **Gate G1 (Oct 26):** do fp8_all and fp8_global start on L4 with Gemma 4?
+- **Gate G1 (Oct 26):** do fp8_all and fp8_global start on L4 with Gemma 4? At TP=1, which arms fit a ~28K prompt?
+  - The TP=1 result decides where closed-loop runs happen: if BF16 cannot hold a long context on one L4 but
+    FP8 can, the headline closed-loop comparison moves to TP=1 (fp8_all vs fp8_global), with 4x L4 BF16 as the reference.
   - Yes: continue.
   - No (e.g. no FP8 kernel for head_dim 512 on Ada): closed loop becomes bf16 only, plus FP8 on another
     GPU if available; the paper leans on open loop plus the memory model. Still a complete paper.

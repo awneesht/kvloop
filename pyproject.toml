@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kvloop"
+version = "0.1.0"
+description = "Does KV cache compression survive the agent loop? Open-loop and closed-loop evaluation of KV cache quantization for Gemma 4 coding agents."
+authors = [{ name = "Awneesh Tiwari" }]
+license = { text = "MIT" }
+requires-python = ">=3.10"
+dependencies = ["numpy", "pyyaml", "pandas"]
+
+[project.optional-dependencies]
+replay = ["torch", "transformers>=5.5", "accelerate"]
+proxy = ["httpx", "starlette", "uvicorn"]
+analysis = ["matplotlib", "scipy"]
+dev = ["pytest"]
+all = ["kvloop[replay,proxy,analysis,dev]"]
+
+[project.scripts]
+kvloop = "kvloop.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["kvloop*"]

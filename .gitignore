@@ -1,0 +1,7 @@
+runs/
+assets/
+*.egg-info/
+__pycache__/
+.pytest_cache/
+*.csv
+!paper/*.csv

@@ -1,0 +1,48 @@
+# Arms for kvloop. Pass with: kvloop --arms configs/arms.yaml ...
+# vllm_kv_cache_dtype: null -> replay only (not available in the scorer's vLLM 0.19.1)
+arms:
+- name: bf16
+  scheme: bf16
+  layers: none
+  vllm_kv_cache_dtype: auto
+  description: 'Baseline: KV cache in model dtype'
+- name: fp8_all
+  scheme: fp8_e4m3
+  layers: all
+  vllm_kv_cache_dtype: fp8
+  description: FP8 E4M3, uncalibrated scale=1, every layer
+- name: fp8_global
+  scheme: fp8_e4m3
+  layers: global
+  vllm_kv_cache_dtype: fp8
+  description: FP8 on global layers only (vLLM skip sliding_window)
+- name: fp8_sliding
+  scheme: fp8_e4m3
+  layers: sliding
+  vllm_kv_cache_dtype: fp8
+  description: FP8 on sliding layers only (skip global indices)
+- name: int8_all
+  scheme: int8_tok
+  layers: all
+  vllm_kv_cache_dtype: null
+  description: INT8 symmetric per token-head (replay only)
+- name: int4_all
+  scheme: int4_tok
+  layers: all
+  vllm_kv_cache_dtype: null
+  description: INT4 asymmetric per token-head, as in vLLM>=0.25 (replay only)
+- name: int4_global
+  scheme: int4_tok
+  layers: global
+  vllm_kv_cache_dtype: null
+  description: INT4 on global layers only (replay only)
+- name: int4_sliding
+  scheme: int4_tok
+  layers: sliding
+  vllm_kv_cache_dtype: null
+  description: INT4 on sliding layers only (replay only)
+- name: kivi2_all
+  scheme: kivi2
+  layers: all
+  vllm_kv_cache_dtype: null
+  description: 'KIVI 2-bit: per-channel K, per-token V, 32-token residual (replay only)'

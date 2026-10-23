@@ -1,7 +1,7 @@
 # vLLM flags that mirror the competition scorer (vLLM 0.19.1, 4x L4).
-# Reconstructed from HARNESS_README §3.1/§3.3/§3.4 as quoted in public entrant repos
-# (e.g. github.com/fatu/gemma4-dev-agent scripts/serve_vllm.sh). Diff against your
-# copy of HARNESS_README.md. Every arm adds its own --kv-cache-dtype flags on top.
+# Confirmed against HARNESS_README.md on Kaggle 2026-10-23: TP 4, gpu_memory_utilization 0.90,
+# max_model_len 32768, gemma4 tool-call and reasoning parsers. Reasoning-config flags follow
+# public entrant scripts. Every arm adds its own --kv-cache-dtype flags on top.
 #
 # The harness hard-codes api_base 127.0.0.1:8000, so run_arm.sh puts the kvloop
 # proxy on :8000 and vLLM on :8100.
@@ -11,7 +11,7 @@
 MODEL="${MODEL:-/kaggle/input/gemma-4-31b-it-qat-w4a16-ct}"
 SERVED_NAME="${SERVED_NAME:-gemma-4-31b-it-qat-w4a16-ct}"
 TP="${TP:-4}"
-GPU_UTIL="${GPU_UTIL:-0.80}"
+GPU_UTIL="${GPU_UTIL:-0.90}"   # HARNESS_README: gpu_memory_utilization = 0.90
 MAX_LEN="${MAX_LEN:-32768}"
 REASONING_START="${REASONING_START:-<|channel>}"
 

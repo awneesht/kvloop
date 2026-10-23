@@ -42,9 +42,21 @@ def _bits(arm: Arm, kind: str) -> float:
     return get_scheme(arm.scheme).bits_per_element
 
 
-def kv_bytes(layout: AttentionLayout, arm: Arm, context: int, store_kv_once: bool = False) -> KVBreakdown:
-    """KV bytes for ONE sequence of `context` tokens (all GPUs combined)."""
-    s_tok = min(context, layout.sliding_window) if layout.sliding_window else context
+def kv_bytes(layout: AttentionLayout, arm: Arm, context: int, store_kv_once: bool = False,
+             prefill_chunk: int = 0) -> KVBreakdown:
+    """KV bytes for ONE sequence of `context` tokens (all GPUs combined).
+
+    prefill_chunk=0 gives the architectural footprint (sliding layers hold `window` tokens).
+    vLLM reserves `window - 1 + max_num_batched_tokens` tokens per sliding layer for chunked
+    prefill; pass prefill_chunk=2048 (vLLM 0.19 default here) to reproduce its accounting.
+    Validated on 4x L4: predicted max concurrency within 1% of vLLM's log for all FP8 arms.
+    """
+    if not layout.sliding_window:
+        s_tok = context
+    elif prefill_chunk:
+        s_tok = min(context, layout.sliding_window - 1 + prefill_chunk)
+    else:
+        s_tok = min(context, layout.sliding_window)
     n_s = len(layout.indices("sliding"))
     n_g = len(layout.indices("global"))
     s_elems = 2 * layout.sliding_kv_heads * layout.sliding_head_dim
@@ -61,9 +73,10 @@ def concurrency(
     context: int,
     kv_pool_bytes: float,
     store_kv_once: bool = False,
+    prefill_chunk: int = 0,
 ) -> float:
     """How many sequences of `context` tokens fit in a KV pool of `kv_pool_bytes`."""
-    return kv_pool_bytes / kv_bytes(layout, arm, context, store_kv_once).total_bytes
+    return kv_pool_bytes / kv_bytes(layout, arm, context, store_kv_once, prefill_chunk).total_bytes
 
 
 def estimate_kv_pool(
@@ -77,11 +90,11 @@ def estimate_kv_pool(
 
 
 def table(layout: AttentionLayout, arms: list[Arm], contexts: list[int], kv_pool_bytes: float,
-          store_kv_once: bool = False) -> list[dict]:
+          store_kv_once: bool = False, prefill_chunk: int = 0) -> list[dict]:
     rows = []
     for arm in arms:
         for c in contexts:
-            b = kv_bytes(layout, arm, c, store_kv_once)
+            b = kv_bytes(layout, arm, c, store_kv_once, prefill_chunk)
             rows.append({
                 "arm": arm.name,
                 "context": c,

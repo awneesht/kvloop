@@ -63,3 +63,14 @@ def test_concurrency_scales_with_compression():
     c8 = concurrency(lay, get_arm("fp8_all"), 32768, pool)
     assert c8 == pytest.approx(2 * c16)
     assert all(a.name for a in DEFAULT_ARMS)
+
+
+def test_vllm_accounting_matches_probe():
+    """Measured on Kaggle 4x L4, vLLM 0.19.1, 2026-10-23: 10.61 GiB KV per GPU,
+    max concurrency at 32K = bf16 8.74, fp8_all 17.48, fp8_global 11.69, fp8_sliding 11.54."""
+    lay = AttentionLayout.gemma4_31b()
+    pool = 10.61 * 4 * 2**30
+    measured = {"bf16": 8.74, "fp8_all": 17.48, "fp8_global": 11.69, "fp8_sliding": 11.54}
+    for arm, m in measured.items():
+        pred = concurrency(lay, get_arm(arm), 32768, pool, prefill_chunk=2048)
+        assert pred == pytest.approx(m, rel=0.015), arm

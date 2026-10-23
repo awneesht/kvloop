@@ -1,0 +1,16 @@
+{
+  "arm": "bf16",
+  "started": true,
+  "vllm_flags": [],
+  "return_token_ids_ok": true,
+  "sample": "",
+  "decode_tok_s_short_ctx": 39.7,
+  "long_prompt_tokens": 28024,
+  "long_prompt_ok": true,
+  "long_prompt_s": 25.2,
+  "long_prompt_error": null,
+  "kv_cache_tokens": 46352,
+  "max_concurrency": 8.74,
+  "attention_backends": [],
+  "errors": []
+}

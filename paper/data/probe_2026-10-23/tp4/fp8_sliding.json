@@ -1,0 +1,30 @@
+{
+  "arm": "fp8_sliding",
+  "started": true,
+  "vllm_flags": [
+    "--kv-cache-dtype",
+    "fp8",
+    "--kv-cache-dtype-skip-layers",
+    "5",
+    "11",
+    "17",
+    "23",
+    "29",
+    "35",
+    "41",
+    "47",
+    "53",
+    "59"
+  ],
+  "return_token_ids_ok": true,
+  "sample": "",
+  "decode_tok_s_short_ctx": 39.78,
+  "long_prompt_tokens": 28024,
+  "long_prompt_ok": true,
+  "long_prompt_s": 24.6,
+  "long_prompt_error": null,
+  "kv_cache_tokens": 92704,
+  "max_concurrency": 11.54,
+  "attention_backends": [],
+  "errors": []
+}

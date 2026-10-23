@@ -1,0 +1,21 @@
+{
+  "arm": "fp8_global",
+  "started": true,
+  "vllm_flags": [
+    "--kv-cache-dtype",
+    "fp8",
+    "--kv-cache-dtype-skip-layers",
+    "sliding_window"
+  ],
+  "return_token_ids_ok": true,
+  "sample": "",
+  "decode_tok_s_short_ctx": 39.63,
+  "long_prompt_tokens": 28024,
+  "long_prompt_ok": true,
+  "long_prompt_s": 23.8,
+  "long_prompt_error": null,
+  "kv_cache_tokens": 46048,
+  "max_concurrency": 11.69,
+  "attention_backends": [],
+  "errors": []
+}

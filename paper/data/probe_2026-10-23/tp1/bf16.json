@@ -1,0 +1,15 @@
+{
+  "arm": "bf16",
+  "started": false,
+  "vllm_flags": [],
+  "kv_cache_tokens": null,
+  "max_concurrency": null,
+  "attention_backends": [],
+  "errors": [
+    "(EngineCore pid=5451) ERROR 10-23 15:57:23 [gpu_model_runner.py:4818] Failed to load model - not enough GPU memory. Try lowering --gpu-memory-utilization to free memory for weights, increasing --tensor-parallel-size, or using --quantization. See https://docs.vllm.ai/en/latest/configuration/conserving_memory/ for more tips. (original error: CUDA out of memory. Tried to allocate 2.62 GiB. GPU 0 has a total capacity of 22.03 GiB of which 2.28 GiB is free. Including non-PyTorch memory, this process has 19.75 GiB memory in use. Of the allocated memory 19.50 GiB is allocated by PyTorch, and 17.91 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables))",
+    "(EngineCore pid=5451) ERROR 10-23 15:57:23 [core.py:1108] torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 2.62 GiB. GPU 0 has a total capacity of 22.03 GiB of which 2.28 GiB is free. Including non-PyTorch memory, this process has 19.75 GiB memory in use. Of the allocated memory 19.50 GiB is allocated by PyTorch, and 17.91 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)",
+    "(EngineCore pid=5451) torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 2.62 GiB. GPU 0 has a total capacity of 22.03 GiB of which 2.28 GiB is free. Including non-PyTorch memory, this process has 19.75 GiB memory in use. Of the allocated memory 19.50 GiB is allocated by PyTorch, and 17.91 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)",
+    "(APIServer pid=5232)     raise RuntimeError(",
+    "(APIServer pid=5232) RuntimeError: Engine core initialization failed. See root cause above. Failed core proc(s): {}"
+  ]
+}

@@ -44,9 +44,9 @@ def cmd_kvmath(a):
 
     lay = _layout(a.config_json)
     pool = a.pool_gib * 2**30 if a.pool_gib else estimate_kv_pool()
-    rows = table(lay, load_arms(a.arms), a.contexts, pool, a.store_kv_once)
+    rows = table(lay, load_arms(a.arms), a.contexts, pool, a.store_kv_once, a.prefill_chunk)
     print(f"layout={lay.name} sliding={len(lay.indices('sliding'))} global={len(lay.indices('global'))} "
-          f"window={lay.sliding_window} pool={pool / 2**30:.1f} GiB")
+          f"window={lay.sliding_window} pool={pool / 2**30:.1f} GiB prefill_chunk={a.prefill_chunk}")
     print(f"{'arm':14s} {'ctx':>6s} {'GiB/agent':>10s} {'global%':>8s} {'max agents':>10s}")
     for r in rows:
         print(f"{r['arm']:14s} {r['context']:6d} {r['kv_gib_per_seq']:10.3f} {100 * r['global_share']:7.1f}% "
@@ -146,6 +146,8 @@ def main(argv=None):
     s.add_argument("--pool-gib", type=float)
     s.add_argument("--contexts", type=int, nargs="+", default=[4096, 8192, 16384, 32768])
     s.add_argument("--store-kv-once", action="store_true")
+    s.add_argument("--prefill-chunk", type=int, default=0,
+                   help="vLLM max_num_batched_tokens (2048) to model its sliding-window reservation")
     s.set_defaults(fn=cmd_kvmath)
     s = sub.add_parser("behaviour")
     s.add_argument("log")

@@ -15,15 +15,20 @@
 # against HARNESS_README.md.
 
 # %%
+import glob
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 
-HARNESS_DIR = "/kaggle/input/gemma-4-developer-agent"          # EDIT: competition data root
-MODEL = "/kaggle/input/gemma-4-31b-it-qat-w4a16-ct"            # EDIT: model dir (see `ls` output in stage 0)
-SUBMISSION = f"{HARNESS_DIR}/sample_submission"                # EDIT: agent config to evaluate (keep fixed)
-KVLOOP_SRC = "/kaggle/input/kvloop"                            # kvloop uploaded as a Kaggle dataset
+# Run the organisers' "Getting Started" section-1 cell FIRST in the same session: it installs vLLM,
+# swegemma and adk_submission from the wheelhouse. This notebook assumes those are importable.
+HARNESS_DIR = "/kaggle/input/competitions/gemma-4-developer-agent"
+MODEL_ROOT = "/kaggle/input/models/google/gemma-4/other/gemma-4-31b-it-qat-w4a16-ct"
+MODEL = str(Path(sorted(glob.glob(f"{MODEL_ROOT}/**/config.json", recursive=True))[0]).parent)
+SUBMISSION = f"{HARNESS_DIR}/sample_submission"                # keep the agent config fixed across arms
+KVLOOP_SRC = "/kaggle/input/datasets/awneesh/kvloop"
 WORK = Path("/kaggle/working")
 RUNS = WORK / "runs"
 N_TASKS = 40                                                   # fixed subset, same for every arm
@@ -37,14 +42,22 @@ def sh(cmd, check=True):
 
 
 # %% [markdown]
-# ## 0. Install kvloop and read the harness docs
+# ## 0. Install kvloop (offline) and check the harness
 
 # %%
-sh(f"pip install -q --no-deps {KVLOOP_SRC} || pip install -q --no-deps git+https://github.com/awneesht/kvloop")
-sh(f"pip install -q --no-index --find-links {HARNESS_DIR}/wheelhouse swegemma adk-submission", check=False)
-sh(f"ls {HARNESS_DIR}; find {HARNESS_DIR} -maxdepth 2 -name 'HARNESS_README*' -exec sed -n '1,200p' {{}} \\;", check=False)
-sh("swegemma --help; swegemma eval --help", check=False)
-sh("python -c 'import vllm, transformers; print(vllm.__version__, transformers.__version__)'", check=False)
+# offline install: no build isolation (it would try to download setuptools)
+r = sh(f"pip install -q --no-deps --no-build-isolation {KVLOOP_SRC}", check=False)
+if r.returncode != 0:  # fallback: import from the read-only dataset and add a CLI shim
+    os.environ["PYTHONPATH"] = KVLOOP_SRC + os.pathsep + os.environ.get("PYTHONPATH", "")
+    sys.path.insert(0, KVLOOP_SRC)
+    Path("/usr/local/bin/kvloop").write_text(f"#!/bin/sh\nexec {sys.executable} -m kvloop.cli \"$@\"\n")
+    os.chmod("/usr/local/bin/kvloop", 0o755)
+sh("kvloop --help | head -3")
+print("MODEL =", MODEL)
+sh(f"ls {HARNESS_DIR}")
+sh(f"find {HARNESS_DIR} -maxdepth 2 -name 'HARNESS_README*' | head -1 | xargs -r sed -n '1,120p'", check=False)
+sh("swegemma eval --help | head -40", check=False)
+sh(f"{sys.executable} -c 'import vllm, transformers; print(vllm.__version__, transformers.__version__)'")
 
 # %% [markdown]
 # ## 1. Architecture and KV memory model (from the real config.json)
